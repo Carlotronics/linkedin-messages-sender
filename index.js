@@ -30,15 +30,15 @@ let prompt_attrs = [
     message: "LinkedIn email" 
   },
   { 
-    name: 'password', 
-    hidden: true, 
-    required: true, 
-    message: "LinkedIn password" 
+    name: 'password',
+    hidden: true,
+    required: true,
+    message: "LinkedIn password"
   },
-  { 
-    name: 'searchInterval', 
+  {
+    name: 'searchInterval',
     default: "100",
-    message: "Wait interval between each connection search (in ms)" 
+    message: "Wait interval between each connection search (in ms)"
   }
 ]
 
@@ -54,16 +54,22 @@ function start() {
   xls = new XLSXReader(xlsx, "Recipients.xlsx", 0);
   if(xls.lines.length == 0)
     return;
+  if(process.argv.length >= 4)
+  {
+    prompt_attrs[0] = prompt_attrs[2];
+    prompt_attrs.pop();
+    prompt_attrs.pop();
+    user_email = process.argv[2];
+    password = process.argv[3];
+  }
   prompt.start()
   
   prompt.get(prompt_attrs, (err, result) => {
-    user_email = result.email
-    password = result.password
+    if(process.argv.length < 4){
+      user_email = result.email
+      password = result.password
+    }
     showNightmare = result.showNightmare === "yes"
-    getUsersPhone = result.getUsersPhone === "yes"
-    getUsersSummary = result.getUsersSummary == "yes"
-    getUsersLocation = result.getUsersLocation == "yes"
-    getLinkedinProfile = result.getLinkedinProfile == "yes"
     searchInterval = parseInt(result.searchInterval)
     nightmare = Nightmare({
       show: true,
@@ -118,7 +124,7 @@ async function sendMessages(index,reset=false) {
     .run(async () => {
       for(var i = 0; i < xls.lines.length; ++i)
       {
-        console.log(xls.lines, i, xls.lines[i])
+        // console.log(xls.lines, i, xls.lines[i])
         await sendMessage(xls.lines[i].firstname + " " + xls.lines[i].lastname, xls.lines[i].message, xls.lines[i].pj.length != 0, i);
         await sleep(searchInterval);
       }
@@ -167,11 +173,12 @@ async function sendMessage(peopleName, message, pj=false, i=0, count=0) {
       return await nightmare
         .wait(1000)
         .click("li-icon[type=compose-icon]")
+        .insert('.msg-connections-typeahead__search-field', '')
         .insert('.msg-connections-typeahead__search-field', peopleName)
-        .wait(".msg-connections-typeahead__search-results", 1000)
-        .exists(".msg-connections-typeahead__search-results > li > button")
+        .wait(".msg-connections-typeahead__search-results", 1400)
+        // .exists(".msg-connections-typeahead__search-results > li > button")
+        .exists(".msg-connections-typeahead__search-results")
         .then(async function(result){
-          console.log(i);
           if(result)
           {
             console.log(peopleName, "is ok")
